@@ -17,7 +17,6 @@
  * under the License.
  */
 import { t } from '@apache-superset/core/translation';
-import { SupersetClient } from '@superset-ui/core';
 import { useCallback, useMemo, useState } from 'react';
 import { ConfirmStatusChange, Tooltip } from '@superset-ui/core/components';
 import {
@@ -26,16 +25,19 @@ import {
   ListViewFilterOperator as FilterOperator,
   type ListViewProps,
   type ListViewFilters,
-  type ListViewFetchDataConfig as FetchDataConfig,
 } from 'src/components';
 import { Icons } from '@superset-ui/core/components/Icons';
 import withToasts from 'src/components/MessageToasts/withToasts';
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
-import rison from 'rison';
 import { useListViewResource } from 'src/views/CRUD/hooks';
 import RowLevelSecurityModal from 'src/features/rls/RowLevelSecurityModal';
 import { RLSObject } from 'src/features/rls/types';
-import { createErrorHandler, createFetchRelated } from 'src/views/CRUD/utils';
+import {
+  createErrorHandler,
+  createFetchRelated,
+  handleResourceDelete,
+  handleBulkResourceDelete,
+} from 'src/views/CRUD/utils';
 import { QueryObjectColumns } from 'src/views/CRUD/types';
 
 interface RLSProps {
@@ -80,39 +82,27 @@ function RowLevelSecurityList(props: RLSProps) {
   }, []);
 
   const handleRuleDelete = useCallback(
-    (
-      { id, name }: RLSObject,
-      refreshData: (arg0?: FetchDataConfig | null) => void,
-      addSuccessToast: (arg0: string) => void,
-      addDangerToast: (arg0: string) => void,
-    ) =>
-      SupersetClient.delete({
-        endpoint: `/api/v1/rowlevelsecurity/${id}`,
-      }).then(
-        () => {
-          refreshData();
-          addSuccessToast(t('Deleted %s', name));
-        },
-        createErrorHandler(errMsg =>
-          addDangerToast(t('There was an issue deleting %s: %s', name, errMsg)),
-        ),
+    ({ id, name }: RLSObject) =>
+      handleResourceDelete(
+        'rowlevelsecurity',
+        id,
+        name,
+        addSuccessToast,
+        addDangerToast,
+        refreshData,
       ),
-    [],
+    [addSuccessToast, addDangerToast, refreshData],
   );
-  function handleBulkRulesDelete(rulesToDelete: RLSObject[]) {
-    const ids = rulesToDelete.map(({ id }) => id);
-    return SupersetClient.delete({
-      endpoint: `/api/v1/rowlevelsecurity/?q=${rison.encode(ids)}`,
-    }).then(
-      () => {
-        refreshData();
-        addSuccessToast(t(`Deleted`));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(t('There was an issue deleting rules: %s', errMsg)),
-      ),
+
+  const handleBulkRulesDelete = (rulesToDelete: RLSObject[]) =>
+    handleBulkResourceDelete(
+      'rowlevelsecurity',
+      rulesToDelete,
+      t('rules'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  }
 
   function handleRuleModalHide() {
     setCurrentRule(null);
@@ -166,13 +156,7 @@ function RowLevelSecurityList(props: RLSProps) {
       },
       {
         Cell: ({ row: { original } }: any) => {
-          const handleDelete = () =>
-            handleRuleDelete(
-              original,
-              refreshData,
-              addSuccessToast,
-              addDangerToast,
-            );
+          const handleDelete = () => handleRuleDelete(original);
           const handleEdit = () => handleRuleEdit(original);
           return (
             <div className="actions">

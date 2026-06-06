@@ -18,12 +18,15 @@
  */
 
 import { useMemo, useState } from 'react';
-import rison from 'rison';
 import { t } from '@apache-superset/core/translation';
-import { SupersetClient } from '@superset-ui/core';
 import { Link, useHistory } from 'react-router-dom';
 import { useListViewResource } from 'src/views/CRUD/hooks';
-import { createFetchRelated, createErrorHandler } from 'src/views/CRUD/utils';
+import {
+  createFetchRelated,
+  createErrorHandler,
+  handleResourceDelete,
+  handleBulkResourceDelete,
+} from 'src/views/CRUD/utils';
 import withToasts from 'src/components/MessageToasts/withToasts';
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
 import { Typography } from '@superset-ui/core/components/Typography';
@@ -87,38 +90,26 @@ function AnnotationLayersList({
   const [layerCurrentlyDeleting, setLayerCurrentlyDeleting] =
     useState<AnnotationLayerObject | null>(null);
 
-  const handleLayerDelete = ({ id, name }: AnnotationLayerObject) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/annotation_layer/${id}`,
-    }).then(
-      () => {
-        refreshData();
-        setLayerCurrentlyDeleting(null);
-        addSuccessToast(t('Deleted: %s', name));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(t('There was an issue deleting %s: %s', name, errMsg)),
-      ),
+  const handleLayerDelete = ({ id, name }: AnnotationLayerObject) =>
+    handleResourceDelete(
+      'annotation_layer',
+      id,
+      name,
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
+      () => setLayerCurrentlyDeleting(null),
     );
-  };
 
-  const handleBulkLayerDelete = (layersToDelete: AnnotationLayerObject[]) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/annotation_layer/?q=${rison.encode(
-        layersToDelete.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected layers: %s', errMsg),
-        ),
-      ),
+  const handleBulkLayerDelete = (layersToDelete: AnnotationLayerObject[]) =>
+    handleBulkResourceDelete(
+      'annotation_layer',
+      layersToDelete,
+      t('layers'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  };
 
   const canCreate = hasPerm('can_write');
   const canEdit = hasPerm('can_write');

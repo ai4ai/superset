@@ -19,7 +19,6 @@
 
 import { useCallback, useMemo, useState, useEffect } from 'react';
 import { t } from '@apache-superset/core/translation';
-import { SupersetClient } from '@superset-ui/core';
 import { Alert } from '@apache-superset/core/components';
 import { styled } from '@apache-superset/core/theme';
 import {
@@ -31,9 +30,13 @@ import {
   Space,
 } from '@superset-ui/core/components';
 
-import rison from 'rison';
 import { useListViewResource } from 'src/views/CRUD/hooks';
-import { createErrorHandler, createFetchRelated } from 'src/views/CRUD/utils';
+import {
+  createErrorHandler,
+  createFetchRelated,
+  handleResourceDelete,
+  handleBulkResourceDelete,
+} from 'src/views/CRUD/utils';
 import withToasts from 'src/components/MessageToasts/withToasts';
 import { useThemeContext } from 'src/theme/ThemeProvider';
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
@@ -150,25 +153,18 @@ function ThemesList({
   const [themeCurrentlyDeleting, setThemeCurrentlyDeleting] =
     useState<ThemeObject | null>(null);
 
-  const handleThemeDelete = ({ id, theme_name }: ThemeObject) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/theme/${id}`,
-    }).then(
-      () => {
-        refreshData();
-        setThemeCurrentlyDeleting(null);
-        addSuccessToast(t('Deleted: %s', theme_name));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting %s: %s', theme_name, errMsg),
-        ),
-      ),
+  const handleThemeDelete = ({ id, theme_name }: ThemeObject) =>
+    handleResourceDelete(
+      'theme',
+      id,
+      theme_name,
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
+      () => setThemeCurrentlyDeleting(null),
     );
-  };
 
   const handleBulkThemeDelete = (themesToDelete: ThemeObject[]) => {
-    // Filter out system themes and themes that are set as system themes
     const deletableThemes = themesToDelete.filter(
       theme =>
         !theme.is_system && !theme.is_system_default && !theme.is_system_dark,
@@ -188,20 +184,13 @@ function ThemesList({
       );
     }
 
-    SupersetClient.delete({
-      endpoint: `/api/v1/theme/?q=${rison.encode(
-        deletableThemes.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected themes: %s', errMsg),
-        ),
-      ),
+    handleBulkResourceDelete(
+      'theme',
+      deletableThemes,
+      t('themes'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
   };
 
