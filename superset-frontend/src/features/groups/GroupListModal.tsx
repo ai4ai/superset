@@ -19,7 +19,6 @@
 import { t } from '@apache-superset/core/translation';
 import { useToasts } from 'src/components/MessageToasts/withToasts';
 import { ModalTitleWithIcon } from 'src/components/ModalTitleWithIcon';
-import { Actions } from 'src/constants';
 import { GroupObject } from 'src/pages/GroupsList';
 import {
   FormItem,
@@ -29,6 +28,7 @@ import {
   AsyncSelect,
 } from '@superset-ui/core/components';
 import { getUserDisplayLabel } from 'src/features/users/utils';
+import { handleFormModalSubmit } from 'src/views/CRUD/utils';
 import { FormValues, GroupModalProps } from './types';
 import { createGroup, fetchUserOptions, updateGroup } from './utils';
 
@@ -42,50 +42,27 @@ function GroupListModal({
 }: GroupModalProps) {
   const { addDangerToast, addSuccessToast } = useToasts();
   const handleFormSubmit = async (values: FormValues) => {
-    const handleError = async (
-      err: Response,
-      action: Actions.CREATE | Actions.UPDATE,
-    ) => {
-      let errorMessage =
-        action === Actions.CREATE
-          ? t('There was an error creating the group. Please, try again.')
-          : t('There was an error updating the group. Please, try again.');
-
-      if (err.status === 422) {
-        const errorData = await err.json();
-        const detail = errorData?.message || '';
-
-        if (detail.includes('duplicate key value')) {
-          if (detail.includes('ab_group_name_key')) {
-            errorMessage = t(
-              'This name is already taken. Please choose another one.',
-            );
-          }
-        }
-      }
-
-      addDangerToast(errorMessage);
-      throw err;
-    };
-
-    if (isEditMode) {
-      if (!group) {
-        throw new Error('Group is required in edit mode');
-      }
-      try {
-        await updateGroup(group.id, values);
-        addSuccessToast(t('The group has been updated successfully.'));
-      } catch (err) {
-        await handleError(err, Actions.UPDATE);
-      }
-    } else {
-      try {
-        await createGroup(values);
-        addSuccessToast(t('The group has been created successfully.'));
-      } catch (err) {
-        await handleError(err, Actions.CREATE);
-      }
+    if (isEditMode && !group) {
+      throw new Error('Group is required in edit mode');
     }
+    return handleFormModalSubmit({
+      isEditMode,
+      createFn: async (v: FormValues) => {
+        await createGroup(v);
+      },
+      updateFn: async (v: FormValues) => {
+        await updateGroup(group!.id, v);
+      },
+      values,
+      addSuccessToast,
+      addDangerToast,
+      entityName: t('group'),
+      duplicateKeyHandlers: {
+        ab_group_name_key: t(
+          'This name is already taken. Please choose another one.',
+        ),
+      },
+    });
   };
 
   const requiredFields = ['name'];

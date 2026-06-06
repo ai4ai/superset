@@ -26,12 +26,12 @@ import { styled } from '@apache-superset/core/theme';
 import { useSelector } from 'react-redux';
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import rison from 'rison';
 import {
   createFetchRelated,
   createFetchOwners,
   createErrorHandler,
   handleDashboardDelete,
+  handleBulkResourceDelete,
 } from 'src/views/CRUD/utils';
 import { OWNER_OPTION_FILTER_PROPS } from 'src/features/owners/OwnerSelectLabel';
 import { useListViewResource, useFavoriteStatus } from 'src/views/CRUD/hooks';
@@ -294,23 +294,15 @@ function DashboardList(props: DashboardListProps) {
     [addDangerToast],
   );
 
-  function handleBulkDashboardDelete(dashboardsToDelete: Dashboard[]) {
-    return SupersetClient.delete({
-      endpoint: `/api/v1/dashboard/?q=${rison.encode(
-        dashboardsToDelete.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected dashboards: ', errMsg),
-        ),
-      ),
+  const handleBulkDashboardDelete = (dashboardsToDelete: Dashboard[]) =>
+    handleBulkResourceDelete(
+      'dashboard',
+      dashboardsToDelete,
+      t('dashboards'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  }
 
   const columns = useMemo(
     () => [

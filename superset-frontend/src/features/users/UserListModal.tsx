@@ -29,9 +29,9 @@ import {
   FormInstance,
 } from '@superset-ui/core/components';
 import { Group, Role, UserObject } from 'src/pages/UsersList/types';
-import { Actions } from 'src/constants';
 import { BaseUserListModalProps, FormValues } from './types';
 import { createUser, updateUser, atLeastOneRoleOrGroup } from './utils';
+import { handleFormModalSubmit } from 'src/views/CRUD/utils';
 
 export interface UserModalProps extends BaseUserListModalProps {
   roles: Role[];
@@ -51,54 +51,30 @@ function UserListModal({
 }: UserModalProps) {
   const { addDangerToast, addSuccessToast } = useToasts();
   const handleFormSubmit = async (values: FormValues) => {
-    const handleError = async (
-      err: any,
-      action: Actions.CREATE | Actions.UPDATE,
-    ) => {
-      let errorMessage =
-        action === Actions.CREATE
-          ? t('There was an error creating the user. Please, try again.')
-          : t('There was an error updating the user. Please, try again.');
-
-      if (err.status === 422) {
-        const errorData = await err.json();
-        const detail = errorData?.message || '';
-
-        if (detail.includes('duplicate key value')) {
-          if (detail.includes('ab_user_username_key')) {
-            errorMessage = t(
-              'This username is already taken. Please choose another one.',
-            );
-          } else if (detail.includes('ab_user_email_key')) {
-            errorMessage = t(
-              'This email is already associated with an account. Please choose another one.',
-            );
-          }
-        }
-      }
-
-      addDangerToast(errorMessage);
-      throw err;
-    };
-
-    if (isEditMode) {
-      if (!user) {
-        throw new Error('User is required in edit mode');
-      }
-      try {
-        await updateUser(user.id, values);
-        addSuccessToast(t('The user has been updated successfully.'));
-      } catch (err) {
-        await handleError(err, Actions.UPDATE);
-      }
-    } else {
-      try {
-        await createUser(values);
-        addSuccessToast(t('The user has been created successfully.'));
-      } catch (err) {
-        await handleError(err, Actions.CREATE);
-      }
+    if (isEditMode && !user) {
+      throw new Error('User is required in edit mode');
     }
+    return handleFormModalSubmit({
+      isEditMode,
+      createFn: async (v: FormValues) => {
+        await createUser(v);
+      },
+      updateFn: async (v: FormValues) => {
+        await updateUser(user!.id, v);
+      },
+      values,
+      addSuccessToast,
+      addDangerToast,
+      entityName: t('user'),
+      duplicateKeyHandlers: {
+        ab_user_username_key: t(
+          'This username is already taken. Please choose another one.',
+        ),
+        ab_user_email_key: t(
+          'This email is already associated with an account. Please choose another one.',
+        ),
+      },
+    });
   };
 
   const requiredFields = isEditMode

@@ -31,6 +31,8 @@ import {
   createErrorHandler,
   createFetchDistinct,
   createFetchRelated,
+  handleResourceDelete,
+  handleBulkResourceDelete,
 } from 'src/views/CRUD/utils';
 import { useSelector } from 'react-redux';
 import {
@@ -283,20 +285,16 @@ function SavedQueryList({
     [addDangerToast, addSuccessToast],
   );
 
-  const handleQueryDelete = ({ id, label }: SavedQueryObject) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/saved_query/${id}`,
-    }).then(
-      () => {
-        refreshData();
-        setQueryCurrentlyDeleting(null);
-        addSuccessToast(t('Deleted: %s', label));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(t('There was an issue deleting %s: %s', label, errMsg)),
-      ),
+  const handleQueryDelete = ({ id, label }: SavedQueryObject) =>
+    handleResourceDelete(
+      'saved_query',
+      id,
+      label,
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
+      () => setQueryCurrentlyDeleting(null),
     );
-  };
 
   const handleBulkSavedQueryExport = async (
     savedQueriesToExport: SavedQueryObject[],
@@ -313,23 +311,15 @@ function SavedQueryList({
     }
   };
 
-  const handleBulkQueryDelete = (queriesToDelete: SavedQueryObject[]) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/saved_query/?q=${rison.encode(
-        queriesToDelete.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected queries: %s', errMsg),
-        ),
-      ),
+  const handleBulkQueryDelete = (queriesToDelete: SavedQueryObject[]) =>
+    handleBulkResourceDelete(
+      'saved_query',
+      queriesToDelete,
+      t('queries'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  };
 
   const initialSort = [{ id: 'changed_on_delta_humanized', desc: true }];
   const columns = useMemo(

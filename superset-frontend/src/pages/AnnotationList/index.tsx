@@ -23,7 +23,6 @@ import { t } from '@apache-superset/core/translation';
 import { SupersetClient, getClientErrorObject } from '@superset-ui/core';
 import { css, styled } from '@apache-superset/core/theme';
 import { extendedDayjs as dayjs } from '@superset-ui/core/utils/dates';
-import rison from 'rison';
 
 import { ConfirmStatusChange, DeleteModal } from '@superset-ui/core/components';
 import {
@@ -35,7 +34,10 @@ import {
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
 import withToasts from 'src/components/MessageToasts/withToasts';
 import { useListViewResource } from 'src/views/CRUD/hooks';
-import { createErrorHandler } from 'src/views/CRUD/utils';
+import {
+  handleResourceDelete,
+  handleBulkResourceDelete,
+} from 'src/views/CRUD/utils';
 
 import { AnnotationObject } from 'src/features/annotations/types';
 import AnnotationModal from 'src/features/annotations/AnnotationModal';
@@ -113,42 +115,28 @@ function AnnotationList({
     [annotationLayerId],
   );
 
-  const handleAnnotationDelete = ({ id, short_descr }: AnnotationObject) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/annotation_layer/${annotationLayerId}/annotation/${id}`,
-    }).then(
-      () => {
-        refreshData();
-        setAnnotationCurrentlyDeleting(null);
-        addSuccessToast(t('Deleted: %s', short_descr));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting %s: %s', short_descr, errMsg),
-        ),
-      ),
+  const handleAnnotationDelete = ({ id, short_descr }: AnnotationObject) =>
+    handleResourceDelete(
+      `annotation_layer/${annotationLayerId}/annotation`,
+      id,
+      short_descr,
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
+      () => setAnnotationCurrentlyDeleting(null),
     );
-  };
 
   const handleBulkAnnotationsDelete = (
     annotationsToDelete: AnnotationObject[],
-  ) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/annotation_layer/${annotationLayerId}/annotation/?q=${rison.encode(
-        annotationsToDelete.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected annotations: %s', errMsg),
-        ),
-      ),
+  ) =>
+    handleBulkResourceDelete(
+      `annotation_layer/${annotationLayerId}/annotation`,
+      annotationsToDelete,
+      t('annotations'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  };
 
   // get the Annotation Layer
   useEffect(() => {

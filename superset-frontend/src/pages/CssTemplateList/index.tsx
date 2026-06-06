@@ -19,11 +19,13 @@
 
 import { useMemo, useState } from 'react';
 import { t } from '@apache-superset/core/translation';
-import { SupersetClient } from '@superset-ui/core';
-
-import rison from 'rison';
 import { useListViewResource } from 'src/views/CRUD/hooks';
-import { createErrorHandler, createFetchRelated } from 'src/views/CRUD/utils';
+import {
+  createErrorHandler,
+  createFetchRelated,
+  handleResourceDelete,
+  handleBulkResourceDelete,
+} from 'src/views/CRUD/utils';
 import withToasts from 'src/components/MessageToasts/withToasts';
 import SubMenu, { SubMenuProps } from 'src/features/home/SubMenu';
 import { DeleteModal, ConfirmStatusChange } from '@superset-ui/core/components';
@@ -87,40 +89,26 @@ function CssTemplatesList({
   const [templateCurrentlyDeleting, setTemplateCurrentlyDeleting] =
     useState<TemplateObject | null>(null);
 
-  const handleTemplateDelete = ({ id, template_name }: TemplateObject) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/css_template/${id}`,
-    }).then(
-      () => {
-        refreshData();
-        setTemplateCurrentlyDeleting(null);
-        addSuccessToast(t('Deleted: %s', template_name));
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting %s: %s', template_name, errMsg),
-        ),
-      ),
+  const handleTemplateDelete = ({ id, template_name }: TemplateObject) =>
+    handleResourceDelete(
+      'css_template',
+      id,
+      template_name,
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
+      () => setTemplateCurrentlyDeleting(null),
     );
-  };
 
-  const handleBulkTemplateDelete = (templatesToDelete: TemplateObject[]) => {
-    SupersetClient.delete({
-      endpoint: `/api/v1/css_template/?q=${rison.encode(
-        templatesToDelete.map(({ id }) => id),
-      )}`,
-    }).then(
-      ({ json = {} }) => {
-        refreshData();
-        addSuccessToast(json.message);
-      },
-      createErrorHandler(errMsg =>
-        addDangerToast(
-          t('There was an issue deleting the selected templates: %s', errMsg),
-        ),
-      ),
+  const handleBulkTemplateDelete = (templatesToDelete: TemplateObject[]) =>
+    handleBulkResourceDelete(
+      'css_template',
+      templatesToDelete,
+      t('templates'),
+      addSuccessToast,
+      addDangerToast,
+      refreshData,
     );
-  };
 
   function handleCssTemplateEdit(cssTemplate: TemplateObject) {
     setCurrentCssTemplate(cssTemplate);

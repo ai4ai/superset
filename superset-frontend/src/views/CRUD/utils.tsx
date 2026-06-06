@@ -320,6 +320,117 @@ export function createErrorHandler(
   };
 }
 
+export function handleResourceDelete(
+  resource: string,
+  id: number,
+  itemName: string,
+  addSuccessToast: (msg: string) => void,
+  addDangerToast: (msg: string) => void,
+  refreshData: () => void,
+  onComplete?: () => void,
+) {
+  return SupersetClient.delete({
+    endpoint: `/api/v1/${resource}/${id}`,
+  }).then(
+    () => {
+      refreshData();
+      onComplete?.();
+      addSuccessToast(t('Deleted: %s', itemName));
+    },
+    createErrorHandler(errMsg =>
+      addDangerToast(t('There was an issue deleting %s: %s', itemName, errMsg)),
+    ),
+  );
+}
+
+export function handleBulkResourceDelete<T extends { id: number }>(
+  resource: string,
+  items: T[],
+  resourceLabel: string,
+  addSuccessToast: (msg: string) => void,
+  addDangerToast: (msg: string) => void,
+  refreshData: () => void,
+) {
+  return SupersetClient.delete({
+    endpoint: `/api/v1/${resource}/?q=${rison.encode(
+      items.map(({ id }) => id),
+    )}`,
+  }).then(
+    ({ json = {} }) => {
+      refreshData();
+      addSuccessToast(json.message);
+    },
+    createErrorHandler(errMsg =>
+      addDangerToast(
+        t(
+          'There was an issue deleting the selected %s: %s',
+          resourceLabel,
+          errMsg,
+        ),
+      ),
+    ),
+  );
+}
+
+export function handleFormModalSubmit<T>({
+  isEditMode,
+  createFn,
+  updateFn,
+  values,
+  addSuccessToast,
+  addDangerToast,
+  entityName,
+  duplicateKeyHandlers,
+}: {
+  isEditMode: boolean;
+  createFn: (values: T) => Promise<void>;
+  updateFn: (values: T) => Promise<void>;
+  values: T;
+  addSuccessToast: (msg: string) => void;
+  addDangerToast: (msg: string) => void;
+  entityName: string;
+  duplicateKeyHandlers?: Record<string, string>;
+}) {
+  const action = isEditMode ? 'update' : 'create';
+  const fn = isEditMode ? updateFn : createFn;
+  const defaultErrorMessage =
+    action === 'create'
+      ? t('There was an error creating the %s. Please, try again.', entityName)
+      : t('There was an error updating the %s. Please, try again.', entityName);
+
+  const handleError = async (err: Response | Error) => {
+    let errorMessage = defaultErrorMessage;
+
+    if ('status' in err && err.status === 422 && duplicateKeyHandlers) {
+      try {
+        const errorData = await (err as Response).json();
+        const detail = errorData?.message || '';
+        if (detail.includes('duplicate key value')) {
+          for (const [key, message] of Object.entries(duplicateKeyHandlers)) {
+            if (detail.includes(key)) {
+              errorMessage = message;
+              break;
+            }
+          }
+        }
+      } catch {
+        // JSON parsing failed, use default error message
+      }
+    }
+
+    addDangerToast(errorMessage);
+    throw err;
+  };
+
+  return fn(values).then(() => {
+    const successMessage =
+      action === 'create'
+        ? t('The %s has been created successfully.', entityName)
+        : t('The %s has been updated successfully.', entityName);
+    addSuccessToast(successMessage);
+  }, handleError);
+}
+
 export function handleChartDelete(
   { id, slice_name: sliceName }: Chart,
   addSuccessToast: (arg0: string) => void,
