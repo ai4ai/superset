@@ -293,10 +293,7 @@ class BaseStreamingCSVExportCommand(BaseCommand):
                             sql, database, limit, catalog, schema
                         )
                     except Exception as e:
-                        logger.error("Error in streaming CSV generator: %s", e)
-                        import traceback
-
-                        logger.error("Traceback: %s", traceback.format_exc())
+                        logger.exception("Error in streaming CSV generator: %s", e)
 
                         # Send error marker for frontend to detect
                         error_marker = (

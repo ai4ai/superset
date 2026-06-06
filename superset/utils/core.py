@@ -606,7 +606,8 @@ def sanitize_url(url: str) -> str:
         # Block everything else (javascript:, data:, etc.)
         return ""
 
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
+        logger.warning("Failed to parse URL for sanitization", exc_info=True)
         return ""
 
 

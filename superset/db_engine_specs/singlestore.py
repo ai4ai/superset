@@ -580,6 +580,12 @@ class SingleStoreSpec(BasicParametersMixin, BaseEngineSpec):
         try:
             cursor.execute(f"KILL CONNECTION {cancel_query_id}")
         except Exception:  # pylint: disable=broad-except
+            logger.warning(
+                "Failed to cancel query %s (cancel_query_id=%s)",
+                query.id,
+                cancel_query_id,
+                exc_info=True,
+            )
             return False
 
         return True

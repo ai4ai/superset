@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+import logging
 from typing import Any, Dict
 from urllib.parse import urlparse
 
@@ -22,6 +23,8 @@ from marshmallow import ValidationError
 
 from superset.themes.types import ThemeMode
 from superset.utils.core import sanitize_svg_content, sanitize_url
+
+logger = logging.getLogger(__name__)
 
 
 def _is_valid_theme_mode(mode: str) -> bool:
@@ -90,7 +93,8 @@ def is_valid_theme(theme: Dict[str, Any]) -> bool:
             return False
 
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
+        logger.warning("Unexpected error validating theme", exc_info=True)
         return False
 
 
