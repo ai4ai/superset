@@ -1168,7 +1168,10 @@ STORE_CACHE_KEYS_IN_METADATA_DB = False
 # CORS Options
 # NOTE: enabling this requires installing the cors-related python dependencies
 # `pip install .[cors]` or `pip install apache_superset[cors]`, depending
-ENABLE_CORS = True
+# on your installation method.
+# SECURITY: CORS is disabled by default (fail-closed). Enable it explicitly in
+# superset_config.py if your deployment requires cross-origin API access.
+ENABLE_CORS = False
 CORS_OPTIONS: dict[Any, Any] = {
     "origins": [
         "https://tile.openstreetmap.org",

@@ -74,6 +74,8 @@ def load_parquet_table(  # noqa: C901
     Returns:
         The created SqlaTable object
     """
+    import re
+
     from sqlalchemy import text
 
     if database is None:
@@ -84,6 +86,12 @@ def load_parquet_table(  # noqa: C901
         if schema is None:
             schema = inspect(engine).default_schema_name
         else:
+            # Validate schema name to prevent SQL injection via identifier
+            if not re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", schema):
+                raise ValueError(
+                    f"Invalid schema name: {schema!r}. "
+                    "Schema names must be alphanumeric with underscores."
+                )
             # Create schema if it doesn't exist (PostgreSQL)
             with engine.begin() as conn:
                 conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
