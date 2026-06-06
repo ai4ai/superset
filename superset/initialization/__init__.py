@@ -691,6 +691,18 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         )
         sys.exit(1)
 
+    def check_session_cookie_security(self) -> None:
+        """Warn when session cookies are not marked Secure in production."""
+        if self.superset_app.debug or self.config.get("TESTING") or is_test():
+            return
+        if not self.config.get("SESSION_COOKIE_SECURE"):
+            self._log_config_warning(
+                "SESSION_COOKIE_SECURE is set to False. Session cookies will be "
+                "transmitted over unencrypted connections.\n"
+                "Set SESSION_COOKIE_SECURE = True in superset_config.py when "
+                "serving over HTTPS to prevent cookie interception."
+            )
+
     def configure_session(self) -> None:
         if self.config["SESSION_SERVER_SIDE"]:
             Session(self.superset_app)
@@ -776,6 +788,7 @@ class SupersetAppInitializer:  # pylint: disable=too-many-public-methods
         # conditionally
         self.configure_feature_flags()
         self.check_guest_token_secret()
+        self.check_session_cookie_security()
         self.configure_db_encrypt()
         self.setup_db()
 
