@@ -212,6 +212,12 @@ class ImpalaEngineSpec(BaseEngineSpec):
             url = f"http://{impala_host}:25000/cancel_query?query_id={cancel_query_id}"
             response = requests.post(url, timeout=3)
         except Exception:  # pylint: disable=broad-except
+            logger.warning(
+                "Failed to cancel query %s (cancel_query_id=%s)",
+                query.id,
+                cancel_query_id,
+                exc_info=True,
+            )
             return False
 
         return bool(response and response.status_code == 200)

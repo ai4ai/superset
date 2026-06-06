@@ -43,6 +43,8 @@ from superset.result_set import SupersetResultSet
 from superset.sql.parse import SQLScript, Table
 from superset.superset_typing import ResultSetColumnType
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from superset.connectors.sqla.models import SqlaTable
 
@@ -86,6 +88,11 @@ def get_physical_table_metadata(
         # Broad exception catch, because there are multiple possible exceptions
         # from different drivers that fall outside CompileError
         except Exception:  # pylint: disable=broad-except
+            logger.debug(
+                "Failed to determine type for column %s, defaulting to UNKNOWN",
+                col.get("column_name"),
+                exc_info=True,
+            )
             col.update(
                 {
                     "type": "UNKNOWN",
@@ -177,7 +184,6 @@ def get_identifier_quoter(drivername: str) -> dict[str, Callable[[str], str]]:
 
 
 DeclarativeModel = TypeVar("DeclarativeModel", bound=DeclarativeMeta)
-logger = logging.getLogger(__name__)
 
 
 def find_cached_objects_in_session(
