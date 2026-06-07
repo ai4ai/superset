@@ -35,6 +35,13 @@ pyarrow>=20.0.0,<21.0.0
 pyopenssl>=26.0.0,<27.0.0
 # Security: CVE-2026-25645 (MEDIUM) - Insecure Temporary File
 requests>=2.33.0,<3.0.0
+# Security: PYSEC-2026-175/176/177/178/179 - multiple JWT vulnerabilities (SSRF, algorithm bypass, DoS)
+pyjwt>=2.13.0,<3.0.0
+# Security: CVE-2026-27205 (LOW) - Flask session Vary:Cookie header bypass
+flask>=3.1.3,<4.0.0
+
+# paramiko 5.x not yet authorized per license review (GPL); keep at 3.x
+paramiko>=3.4.0,<4.0.0
 
 # 5.0.0 has a sensitive deprecation used in other libs
 # -> https://github.com/aio-libs/async-timeout/blob/master/CHANGES.rst#500-2024-10-31
